@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 """Run every trained controller on the same reference paths and compare them.
 
-This is the headline experiment of the repository: all four controllers are
-driven over identical paths under identical conditions, and the resulting
-tracks, errors, and summary metrics are plotted together.
+This is the headline experiment of the repository: the controllers listed
+under ``agents`` in the root ``config`` file are driven over identical paths
+under identical conditions, and the resulting tracks, errors, and summary
+metrics are plotted together.
 
 Every figure is written as PNG, HTML, and PDF. The HTML version is interactive
 -- pan, zoom, and hover to read values off any track.
 
 Examples::
 
-    # Every released model on the default reference paths, in calm water
+    # Every controller named in the config file, on the default reference paths
     uv run scripts/analyze.py
 
     # One path, in wind
@@ -33,6 +34,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from asv_rl import settings  # noqa: E402
 from asv_rl.config import ConfigError  # noqa: E402
 
 #: Reference paths compared when --trajectory is not given.
@@ -46,6 +48,10 @@ def discover_models(models_root: Path) -> dict[str, Path]:
     """Find one usable run directory per experiment under ``models/``.
 
     A run is usable when it has both a ``config.yaml`` and a ``policy/``.
+    Only the controllers listed under ``agents`` in the root ``config`` file
+    are kept, and they are returned in that order, so the comparison is
+    changed by editing the config rather than the code. An empty or missing
+    ``agents`` list means every run found.
     """
     found: dict[str, list[Path]] = {}
     for config_path in sorted(models_root.glob("*/*/config.yaml")):
@@ -64,6 +70,24 @@ def discover_models(models_root: Path) -> dict[str, Path]:
                 f"Pass --model {experiment}=<path> to choose another.",
                 file=sys.stderr,
             )
+
+    wanted = settings.get("agents") or []
+    if wanted:
+        missing = [name for name in wanted if name not in selected]
+        if missing:
+            print(
+                f"note: no run found under {models_root} for {', '.join(missing)} "
+                "(listed under 'agents' in the config file).",
+                file=sys.stderr,
+            )
+        dropped = [name for name in selected if name not in wanted]
+        if dropped:
+            print(
+                f"note: skipping {', '.join(dropped)}; the config file lists "
+                f"{', '.join(wanted)} under 'agents'.",
+                file=sys.stderr,
+            )
+        selected = {name: selected[name] for name in wanted if name in selected}
     return selected
 
 
@@ -79,7 +103,8 @@ def parse_args(argv=None):
         default=[],
         metavar="NAME=PATH",
         help="Controller to include, e.g. --model ddpg=models/ddpg/calm_water_v1. "
-             "Repeatable. Default: every run found under models/.",
+             "Repeatable. Overrides the 'agents' list in the config file. "
+             "Default: the runs under models/ named by that list.",
     )
     parser.add_argument(
         "--trajectory",
@@ -148,6 +173,7 @@ def apply_conditions(env_config, args):
 
 def main(argv=None) -> int:
     args = parse_args(argv)
+    settings.configure_logging("analyze")
 
     from asv_rl.evaluation import trajectories as traj_module  # pure geometry, no TF
 
@@ -166,8 +192,9 @@ def main(argv=None) -> int:
 
     if not models:
         print(
-            f"No runs found under {args.models_root}. A run directory needs a "
-            "config.yaml and a policy/ subdirectory.",
+            f"No runs found under {args.models_root} for the controllers in the "
+            "config file. A run directory needs a config.yaml and a policy/ "
+            "subdirectory, and its name must be listed under 'agents' in the config.",
             file=sys.stderr,
         )
         return 2
@@ -175,6 +202,7 @@ def main(argv=None) -> int:
     from asv_rl.agents.registry import load_config
     from asv_rl.evaluation.plotting import (
         FIGURE_FORMATS,
+        VALUE_FORMAT,
         grouped_bar_figure,
         label_for,
         save_figure,
@@ -188,7 +216,7 @@ def main(argv=None) -> int:
 
     # Load each controller's environment, then force the same conditions on all.
     configs = {}
-    for name, run_dir in sorted(models.items()):
+    for name, run_dir in models.items():
         config_path = run_dir / "config.yaml"
         if not config_path.exists():
             print(f"No config.yaml in {run_dir}", file=sys.stderr)
@@ -303,14 +331,14 @@ def main(argv=None) -> int:
     save_figure(
         grouped_bar_figure(
             pretty_names, column("cross_track_rmse"),
-            y_title="Cross-track RMSE (ship lengths), lower is better",
+            y_title="Cross-track RMSE (ship lengths)",
         ),
         output_dir / "summary_cross_track_rmse", formats,
     )
     save_figure(
         grouped_bar_figure(
             pretty_names, column("mean_absolute_rudder_deg"),
-            y_title="Mean absolute rudder angle (degrees), lower is better",
+            y_title="Mean absolute rudder angle (degrees)",
         ),
         output_dir / "summary_rudder_effort", formats,
     )
@@ -320,8 +348,8 @@ def main(argv=None) -> int:
             [
                 [r["trajectory"] for r in results],
                 [label_for(r["controller"]) for r in results],
-                [f"{r['cross_track_rmse']:.4f}" for r in results],
-                [f"{r['mean_absolute_rudder_deg']:.2f}" for r in results],
+                [f"{r['cross_track_rmse']:{VALUE_FORMAT}}" for r in results],
+                [f"{r['mean_absolute_rudder_deg']:{VALUE_FORMAT}}" for r in results],
                 [r["steps"] for r in results],
                 ["yes" if r["completed"] else "no" for r in results],
             ],

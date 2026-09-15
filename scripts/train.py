@@ -28,6 +28,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from asv_rl import settings  # noqa: E402
 from asv_rl.config import ConfigError  # noqa: E402
 
 
@@ -69,6 +70,7 @@ def parse_args(argv=None):
 
 def main(argv=None) -> int:
     args = parse_args(argv)
+    settings.configure_logging("train")
 
     from asv_rl.agents.registry import load_config
 

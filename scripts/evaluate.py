@@ -19,8 +19,9 @@ Examples::
         --trajectory ellipse --wind-speed 6 --wind-dir 90 \
         --wave-height 3 --wave-period 10 --wave-dir 45
 
-Figures are written as PNG, HTML, and PDF. To compare all four controllers on
-the same paths in one go, use scripts/analyze.py instead.
+Figures are written as PNG, HTML, and PDF. To compare every controller listed
+under ``agents`` in the root ``config`` file on the same paths in one go, use
+scripts/analyze.py instead.
 """
 
 from __future__ import annotations
@@ -33,6 +34,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from asv_rl import settings  # noqa: E402
 from asv_rl.config import ConfigError  # noqa: E402
 
 #: Paths evaluated when --trajectory is not given.
@@ -96,6 +98,7 @@ def apply_conditions(env_config, args):
 
 def main(argv=None) -> int:
     args = parse_args(argv)
+    settings.configure_logging("evaluate")
 
     from asv_rl.evaluation import trajectories as traj_module  # pure geometry, no TF
 

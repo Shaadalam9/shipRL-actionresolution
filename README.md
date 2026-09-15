@@ -28,7 +28,7 @@ The project is managed with [uv](https://docs.astral.sh/uv/).
 ```bash
 uv sync                          # create the environment from uv.lock
 
-uv run scripts/analyze.py        # run all four controllers and compare them
+uv run scripts/analyze.py        # run the controllers in `config` and compare them
 uv run scripts/train.py configs/ddpg.yaml --run-name my_run
 uv run scripts/evaluate.py models/ddpg/calm_water_v1
 ```
@@ -67,9 +67,11 @@ needed.
 
 ## The comparison
 
-`scripts/analyze.py` is the headline experiment: it loads every trained policy,
-runs each one over the same reference paths under the same conditions, and
-writes the comparison figures.
+`scripts/analyze.py` is the headline experiment: it loads the trained policy of
+every controller listed under `agents` in the [`config`](config) file, runs each
+one over the same reference paths under the same conditions, and writes the
+comparison figures. Edit that list to change which controllers take part —
+`--model NAME=PATH` overrides it for a single run.
 
 ```bash
 uv run scripts/analyze.py                                       # calm water
@@ -142,7 +144,9 @@ configs/                   one YAML per experiment
 models/<experiment>/<run>/ trained policies, each with its own config
 scripts/train.py           training entry point
 scripts/evaluate.py        evaluate one policy
-scripts/analyze.py         compare every policy
+scripts/analyze.py         compare the policies listed in `config`
+asv_rl/settings.py         project-wide settings read from `config`
+config                     which controllers to compare, figure font, log level
 docker/                    build and run scripts for the training image
 ```
 
@@ -170,6 +174,26 @@ with a bonus on reaching the goal. Every coefficient is configurable under
 overshoots and is heading away from the goal, or the step limit expires.
 
 ## Configuration
+
+### Project settings: the `config` file
+
+[`config`](config) is a small JSON file of settings that are not part of any one
+experiment. It is read at start-up, with [`default.config`](default.config) as
+the fallback:
+
+| Key | Effect |
+|---|---|
+| `agents` | Controllers `scripts/analyze.py` compares, in plot order. The default drops `dqn_3_action` and compares `dqn_5_action`, `ddpg`, and `ppo`; add it back for the four-way comparison. |
+| `font_family` | Font of every figure |
+| `font_size` | Base font size of every figure; legends, ticks, and value labels sit two points below it |
+| `plotly_template` | Plotly template underlying every figure |
+| `decimal_places` | Decimals on every number a figure draws: axis ticks, bar value labels, hover readouts, and the summary table |
+| `logger_level` | Log level of the three scripts |
+
+`config` is not tracked, so each machine can keep its own; copy `default.config`
+to `config` to start from the shipped values.
+
+### Experiment settings: the YAML configs
 
 One YAML file describes an entire run — environment, agent, and training
 schedule — and is copied into the run directory, so a trained policy always
