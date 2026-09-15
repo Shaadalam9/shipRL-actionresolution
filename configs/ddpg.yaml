@@ -1,0 +1,80 @@
+# DDPG with a continuous rudder command.
+#
+# These are the settings that produced models/ddpg/calm_water_v1.
+# Train with:  python scripts/train.py configs/ddpg.yaml
+
+algorithm: ddpg
+experiment: ddpg
+run_name: calm_water_v1
+seed: 38153
+description: >
+  Deep Deterministic Policy Gradient controlling a continuous rudder angle in
+  calm water. The actor outputs a rudder angle directly, so the controller is
+  not limited to a small set of discrete settings.
+
+environment:
+  episode_steps: 160 # time limit per training episode
+  integration_dt: 0.3 # non-dimensional control interval
+  arrival_radius: 1.5 # a waypoint counts as reached inside this radius
+  terminal_reward: 100.0 # bonus on reaching the goal (training only)
+  initial_surge: 1.0 # non-dimensional surge velocity at episode start
+  goal_radius_range: [8, 28] # random goal distance sampled per episode
+
+  action_space:
+    type: continuous
+    max_rudder_deg: 35.0
+
+  reward:
+    cross_track_scale: 2.0
+    cross_track_decay: 0.08
+    cross_track_offset: -1.0
+    course_scale: 1.3
+    course_decay: 10.0
+    course_offset: -0.3
+    distance_weight: 0.25
+
+  conditions:
+    wind:
+      enabled: false
+      speed: 0.0
+      direction_deg: 0.0
+    wave:
+      enabled: false
+      height: 0.0
+      period: 0.0
+      direction_deg: 0.0
+
+agent:
+  actor:
+    layers: [256, 256]
+    activation: relu
+    learning_rate:
+      initial: 0.0003
+      # decay_steps/decay_rate omitted: the published run used a constant rate
+  critic:
+    observation_layers: [32, 32]
+    action_layers: [16, 16]
+    joint_layers: [256, 256]
+    activation: relu
+    learning_rate:
+      initial: 0.001
+  discount: 0.96
+  target_update_tau: 0.01
+  target_update_period: 1
+  exploration:
+    # Gaussian noise on the actor output, decaying linearly to zero
+    std: 0.15
+    decay_episodes: 9000
+
+training:
+  episodes: 10001
+  warmup_episodes: 10 # random-policy episodes to seed the replay buffer
+  update_every_steps: 10 # gradient step every N environment steps
+  checkpoint_every: 1000
+  metric_window: 100 # episodes averaged for reported returns
+  replay_buffer:
+    capacity: 100000
+    batch_size: 128
+    n_step: 2
+    parallel_calls: 2
+    prefetch: 3

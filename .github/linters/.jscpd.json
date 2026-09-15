@@ -1,0 +1,11 @@
+{
+  "threshold": 10,
+  "reporters": ["console"],
+  "ignore": [
+    "**/.venv/**",
+    "**/node_modules/**",
+    "**/analysis/**",
+    "**/models/**",
+    "**/uv.lock"
+  ]
+}

@@ -1,0 +1,17 @@
+# Ruff configuration used by the Super-linter workflow.
+#
+# The line length matches .flake8 and .python-lint; all three must agree or the
+# two Python linters contradict each other.
+line-length = 119
+target-version = "py39"
+
+[lint]
+# pycodestyle (E/W), pyflakes (F), isort (I), pyupgrade (UP), bugbear (B).
+# flake8-comprehensions is deliberately left out: the plotting module uses
+# dict(...) throughout because that is how Plotly layouts are written.
+select = ["E", "W", "F", "I", "UP", "B"]
+
+[lint.per-file-ignores]
+# The dynamics module is a direct transcription of the MMG model; its
+# single-letter names mirror the published hydrodynamic notation.
+"asv_rl/dynamics/kcs.py" = ["E741"]

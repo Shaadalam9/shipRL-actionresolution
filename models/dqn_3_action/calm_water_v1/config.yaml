@@ -1,0 +1,73 @@
+# DQN over three fixed rudder angles (hard-over port, midships, hard-over starboard).
+#
+# No trained checkpoint ships for this variant; see models/dqn_3_action/README.md.
+# Train with:  python scripts/train.py configs/dqn_3_action.yaml
+
+algorithm: dqn
+experiment: dqn_3_action
+run_name: calm_water_v1
+seed: 69574
+description: >
+  Deep Q-Network restricted to hard-over port, midships, and hard-over
+  starboard. It is the coarsest controller in the comparison and tends to
+  produce a visibly zig-zagging track, which is the point of including it.
+
+environment:
+  episode_steps: 160
+  integration_dt: 0.3
+  arrival_radius: 0.5 # tighter than the 5-action variant, as originally set
+  terminal_reward: 100.0
+  initial_surge: 1.0
+  goal_radius_range: [8, 28]
+
+  action_space:
+    type: discrete
+    rudder_angles_deg: [-35, 0, 35]
+
+  reward:
+    cross_track_scale: 2.0
+    cross_track_decay: 0.08
+    cross_track_offset: -1.0
+    course_scale: 1.3
+    course_decay: 10.0
+    course_offset: -0.3
+    distance_weight: 0.25
+
+  conditions:
+    wind:
+      enabled: false
+      speed: 0.0
+      direction_deg: 0.0
+    wave:
+      enabled: false
+      height: 0.0
+      period: 0.0
+      direction_deg: 0.0
+
+agent:
+  q_network:
+    layers: [64, 64]
+    activation: tanh
+  learning_rate:
+    initial: 0.001
+    decay_steps: 5000
+    decay_rate: 0.5
+  discount: 0.95
+  target_update_tau: 0.01
+  target_update_period: 1
+  exploration:
+    decay_episodes: 5000
+    final_epsilon: 0.2 # keeps exploring for the whole run
+
+training:
+  episodes: 10001
+  warmup_episodes: 10
+  update_every_steps: 20
+  checkpoint_every: 1000
+  metric_window: 100
+  replay_buffer:
+    capacity: 100000
+    batch_size: 128
+    n_step: 2
+    parallel_calls: 2
+    prefetch: 3

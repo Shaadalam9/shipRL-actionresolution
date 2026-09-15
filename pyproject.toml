@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "asv-rl"
+version = "1.0.0"
+description = "Reinforcement learning controllers for autonomous surface vessel path following"
+readme = "README.md"
+# TensorFlow 2.9.x, which the released policies were trained with,
+# publishes no wheels beyond Python 3.10.
+requires-python = ">=3.9,<3.11"
+license = {file = "LICENSE"}
+authors = [
+    {name = "Marine Autonomous Vessels Laboratory, IIT Madras"},
+]
+keywords = ["reinforcement-learning", "ship-control", "path-following", "kcs", "marine-autonomy"]
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = [
+    # TensorFlow 2.16 made Keras 3 the default; tf-agents still requires the
+    # Keras 2 API (tf.keras.layers.experimental and friends) and fails to
+    # import against Keras 3, so the upper bound is load-bearing, not caution.
+    "tf-agents>=0.16",
+    "tensorflow>=2.14,<2.15; sys_platform != 'darwin' or platform_machine != 'arm64'",
+    # On Apple Silicon the PyPI `tensorflow` wheel for these versions is an
+    # empty shim; the real package is tensorflow-macos.
+    "tensorflow-macos>=2.14,<2.15; sys_platform == 'darwin' and platform_machine == 'arm64'",
+    # tensorflow-probability asserts a minimum TensorFlow version at import
+    # time, so it has to be pinned to the arm that matches TensorFlow 2.14.
+    "tensorflow-probability>=0.22,<0.23",
+    # TensorFlow below 2.16 is built against the NumPy 1.x ABI and crashes on
+    # import with NumPy 2.
+    "numpy>=1.22,<2",
+    "scipy>=1.9",
+    "plotly>=5.18",
+    "kaleido>=0.2.1",
+    "PyYAML>=6.0",
+]
+
+[project.scripts]
+asv-train = "scripts.train:main"
+asv-evaluate = "scripts.evaluate:main"
+asv-analyze = "scripts.analyze:main"
+
+[tool.setuptools.packages.find]
+include = ["asv_rl*"]
+
+[tool.setuptools.package-data]
+"asv_rl.dynamics" = ["data/*.mat"]
+
+[tool.uv]
+# TensorFlow wheels are large; keep resolution stable across machines.
+package = true

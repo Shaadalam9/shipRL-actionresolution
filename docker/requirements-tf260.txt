@@ -1,0 +1,8 @@
+tf-agents==0.10.0
+scipy==1.4.1
+gym==0.24.1
+numpy==1.19.5
+tensorflow-probability==0.14.0
+PyYAML>=5.4
+plotly>=5.18
+kaleido>=0.2.1

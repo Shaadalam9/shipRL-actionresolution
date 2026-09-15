@@ -1,0 +1,89 @@
+---
+############################
+# Super-Linter GitHub Action
+############################
+name: Lint
+
+############################
+# Triggers
+############################
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+############################
+# Minimal permissions
+# - contents: read -> checkout code
+# - statuses: write -> allow Super-linter to post status checks
+############################
+permissions:
+  contents: read
+  statuses: write
+
+jobs:
+  lint:
+    name: Super-linter (allow-list)
+    runs-on: ubuntu-latest
+
+    steps:
+      ##########################
+      # Checkout repository
+      ##########################
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Needed so Super-linter can compute the "changed files" set
+          fetch-depth: 0
+
+      ##########################
+      # Run Super-linter
+      ##########################
+      - name: Run Super-linter
+        uses: super-linter/super-linter@v8.3.2
+        env:
+          ##########################
+          # Required
+          ##########################
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEFAULT_BRANCH: main
+
+          ##########################
+          # Only lint changed files
+          ##########################
+          VALIDATE_ALL_CODEBASE: false
+
+          ##########################
+          # Use repo-provided linter configs
+          ##########################
+          LINTER_RULES_PATH: .github/linters
+          JSCPD_CONFIG_FILE: .jscpd.json
+
+          ##########################
+          # Optional filtering (applies to most tools, but NOT all)
+          ##########################
+          FILTER_REGEX_EXCLUDE: (README\.md|figures/.*)
+
+          ############################################################
+          # IMPORTANT: Allow-list mode
+          #
+          # Super-linter rules:
+          # - If you set ANY VALIDATE_* to true, all others default to false.
+          #   (So you avoid BIOME/CHECKOV/Zizmor/etc unless you explicitly enable them.)
+          ############################################################
+          VALIDATE_GITHUB_ACTIONS: true
+          VALIDATE_YAML: true
+          VALIDATE_YAML_PRETTIER: true
+
+          # Python: pick a minimal, practical set
+          VALIDATE_PYTHON_FLAKE8: true
+          VALIDATE_PYTHON_RUFF: true
+
+          # Optional: enable these only when your repo is ready
+          # VALIDATE_PYTHON_RUFF_FORMAT: true
+          # VALIDATE_PYTHON_MYPY: true
+          # VALIDATE_PYTHON_PYLINT: true
+
+          # Optional: run duplicate-code checks (note: JSCPD always scans the whole workspace)
+          VALIDATE_JSCPD: true

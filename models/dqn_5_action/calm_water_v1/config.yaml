@@ -1,0 +1,73 @@
+# DQN over five fixed rudder angles.
+#
+# These are the settings that produced models/dqn_5_action/calm_water_v1.
+# Train with:  python scripts/train.py configs/dqn_5_action.yaml
+
+algorithm: dqn
+experiment: dqn_5_action
+run_name: calm_water_v1
+seed: 95832
+description: >
+  Deep Q-Network choosing between five rudder settings. The two intermediate
+  angles let the agent hold a gentler turn than the 3-action variant, which
+  trades some responsiveness for a smoother track.
+
+environment:
+  episode_steps: 160
+  integration_dt: 0.3
+  arrival_radius: 1.5
+  terminal_reward: 100.0
+  initial_surge: 1.0
+  goal_radius_range: [8, 28]
+
+  action_space:
+    type: discrete
+    rudder_angles_deg: [-35, -20, 0, 20, 35]
+
+  reward:
+    cross_track_scale: 2.0
+    cross_track_decay: 0.08
+    cross_track_offset: -1.0
+    course_scale: 1.3
+    course_decay: 10.0
+    course_offset: -0.3
+    distance_weight: 0.25
+
+  conditions:
+    wind:
+      enabled: false
+      speed: 0.0
+      direction_deg: 0.0
+    wave:
+      enabled: false
+      height: 0.0
+      period: 0.0
+      direction_deg: 0.0
+
+agent:
+  q_network:
+    layers: [64, 64]
+    activation: tanh
+  learning_rate:
+    initial: 0.001
+    decay_steps: 50000
+    decay_rate: 0.4
+  discount: 0.96
+  target_update_tau: 0.01
+  target_update_period: 1
+  exploration:
+    decay_episodes: 6000 # epsilon falls from 1.0 over this many episodes
+    final_epsilon: 0.0 # and is held here afterwards
+
+training:
+  episodes: 10001
+  warmup_episodes: 10
+  update_every_steps: 10
+  checkpoint_every: 1000
+  metric_window: 100
+  replay_buffer:
+    capacity: 100000
+    batch_size: 128
+    n_step: 2
+    parallel_calls: 2
+    prefetch: 3
