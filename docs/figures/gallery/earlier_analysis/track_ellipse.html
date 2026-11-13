@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>track ellipse</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #fcfcfb; font-family: Helvetica, Arial, sans-serif; }
+  #bar { padding: 8px 12px; font-size: 14px; color: #52514e; border-bottom: 1px solid #e6e5e1; }
+  #stage { position: absolute; top: 37px; bottom: 0; left: 0; right: 0; overflow: hidden; cursor: grab; }
+  #stage.dragging { cursor: grabbing; }
+  #img { position: absolute; transform-origin: 0 0; user-select: none; -webkit-user-drag: none; }
+</style>
+</head>
+<body>
+<div id="bar">track ellipse &mdash; scroll to zoom, drag to pan, double-click to reset</div>
+<div id="stage"><img id="img" alt="track ellipse" src="track_ellipse.png"
+  onerror="if (!this.dataset.f) { this.dataset.f = 1; this.src = 'https://raw.githubusercontent.com/Shaadalam9/shipRL-actionresolution/main/docs/figures/gallery/earlier_analysis/track_ellipse.png'; }"></div>
+<script>
+(function () {
+  var stage = document.getElementById("stage"), img = document.getElementById("img");
+  var s = 1, x = 0, y = 0, drag = null;
+  function apply() { img.style.transform = "translate(" + x + "px," + y + "px) scale(" + s + ")"; }
+  function fit() {
+    var w = img.naturalWidth, h = img.naturalHeight;
+    if (!w || !h) return;
+    s = Math.min(stage.clientWidth / w, stage.clientHeight / h);
+    x = (stage.clientWidth - w * s) / 2; y = (stage.clientHeight - h * s) / 2; apply();
+  }
+  img.addEventListener("load", fit); window.addEventListener("resize", fit);
+  stage.addEventListener("wheel", function (e) {
+    e.preventDefault();
+    var r = stage.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
+    var k = Math.exp(-e.deltaY * 0.0015), ns = Math.min(Math.max(s * k, 0.05), 40);
+    x = px - (px - x) * ns / s; y = py - (py - y) * ns / s; s = ns; apply();
+  }, { passive: false });
+  stage.addEventListener("pointerdown", function (e) {
+    drag = { px: e.clientX, py: e.clientY, x: x, y: y };
+    stage.classList.add("dragging"); stage.setPointerCapture(e.pointerId);
+  });
+  stage.addEventListener("pointermove", function (e) {
+    if (!drag) return; x = drag.x + e.clientX - drag.px; y = drag.y + e.clientY - drag.py; apply();
+  });
+  stage.addEventListener("pointerup", function () { drag = null; stage.classList.remove("dragging"); });
+  stage.addEventListener("dblclick", fit);
+  if (img.complete) fit();
+})();
+</script>
+</body>
+</html>
