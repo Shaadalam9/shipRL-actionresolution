@@ -98,11 +98,16 @@ manoeuvres. Every figure below is clickable and opens an interactive version.
 
 [![Cross-track RMSE by controller](docs/figures/calm_summary_rmse.png)](https://htmlpreview.github.io/?https://github.com/Shaadalam9/shipRL-actionresolution/blob/main/docs/figures/calm_summary_rmse.html)
 
-*Cross-track RMSE (ship lengths) by controller and manoeuvre, calm water.*
+*Fig. 1 of the paper, left: cross-track RMSE in ship lengths (L) for each
+controller on the nine calm water manoeuvres: four single-destination paths
+named by their goal (x, y) in L, then the cardioid, astroid, sine, star, and
+circle. Lower is better.*
 
 [![Rudder demand by controller](docs/figures/calm_summary_rudder.png)](https://htmlpreview.github.io/?https://github.com/Shaadalam9/shipRL-actionresolution/blob/main/docs/figures/calm_summary_rudder.html)
 
-*Mean absolute realised rudder angle (rad) by controller and manoeuvre, calm water.*
+*Fig. 1 of the paper, right: mean absolute realised rudder angle in radians on
+the same manoeuvres, a measure of average steering demand. Lower is better. PPO
+uses the least rudder on every manoeuvre.*
 
 DQN 3 has the lowest mean cross-track RMSE in calm water (1.16 L against 1.25 L
 for both others), while PPO uses the least rudder on every manoeuvre (mean
@@ -113,7 +118,28 @@ again the least rudder in every case.
 
 [![Figure-eight tracks](docs/figures/track_figure_eight.png)](https://htmlpreview.github.io/?https://github.com/Shaadalam9/shipRL-actionresolution/blob/main/docs/figures/track_figure_eight.html)
 
-*Paths followed on the figure-of-eight, calm water, at the 0.5 L arrival radius.*
+*Not in the paper: tracks of the three controllers on the figure-of-eight in
+calm water, produced by `analyze.py` from the released policies at the 0.5 L
+arrival radius. The dashed line is the reference path and the circles are its
+waypoints.*
+
+### Model-scale experiments
+
+The paper also tests the three policies on a 1:75.5 scale KCS model on a lake,
+following a square path of about 40 m by 40 m (Fig. 2 and Table V of the paper).
+Position comes from RTK GPS fused with an IMU, the propeller turns at a constant
+speed, and the policy commands only the rudder.
+
+| DQN, 3 actions | DQN, 5 actions | PPO |
+|---|---|---|
+| [![DQN 3 on the model-scale square path](docs/figures/experiment_square_dqn_3.png)](https://htmlpreview.github.io/?https://github.com/Shaadalam9/shipRL-actionresolution/blob/main/docs/figures/experiment_square_dqn_3.html) | [![DQN 5 on the model-scale square path](docs/figures/experiment_square_dqn_5.png)](https://htmlpreview.github.io/?https://github.com/Shaadalam9/shipRL-actionresolution/blob/main/docs/figures/experiment_square_dqn_5.html) | [![PPO on the model-scale square path](docs/figures/experiment_square_ppo.png)](https://htmlpreview.github.io/?https://github.com/Shaadalam9/shipRL-actionresolution/blob/main/docs/figures/experiment_square_ppo.html) |
+
+*Fig. 2 of the paper: measured tracks of the model-scale ship on the square
+path, over aerial imagery of the test lake. White markers are the waypoints and
+the red line is the measured trajectory. The experimental cross-track RMSE is
+0.83 L for DQN 3, 0.86 L for DQN 5, and 0.79 L for PPO, an increase over
+simulation of 29.7%, 38.1%, and 22.6%. The interactive versions are zoomable
+images.*
 
 Each run writes, per reference path, a track plot, a cross-track error series,
 and a rudder angle series, plus three summary figures and a `results.json`.
@@ -153,7 +179,9 @@ degrees, wind speed relative to ship speed):
 
 Fig. 1 of the paper and the two calm water figures above are drawn from the
 values of Table II by `uv run scripts/paper_figures.py`, which writes
-`paper/plots/calm_summary_*.pdf` and `docs/figures/calm_summary_*.{{png,html}}`.
+`paper/plots/calm_summary_*.pdf` and `docs/figures/calm_summary_*.{png,html}`.
+The same script writes the zoomable HTML beside each Fig. 2 image in
+`docs/figures/experiment_square_*.png`.
 
 ## Figures
 
@@ -197,7 +225,7 @@ scripts/train.py           training entry point
 scripts/evaluate.py        evaluate one policy
 scripts/analyze.py         compare the policies listed in `config`
 scripts/paper_figures.py   draw Fig. 1 of the paper and the README summary figures
-docs/figures/              README figures (PNG, with interactive HTML beside each)
+docs/figures/              README figures, incl. Figs. 1 and 2 of the paper (PNG + HTML)
 asv_rl/settings.py         project-wide settings read from `config`
 config                     which controllers to compare, figure font, log level
 docker/                    build and run scripts for the training image

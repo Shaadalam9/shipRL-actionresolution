@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Draw the calm water summary figure of the paper (Fig. 1) from Table II.
+"""Draw the paper's figures for the paper and the README.
+
+Fig. 1 (calm water summary) is drawn from Table II.
 
 The figure must match Table II of the paper exactly, so the values below are
 copied from that table rather than produced by a fresh evaluation. Each panel
@@ -9,6 +11,11 @@ is written twice:
 - ``docs/figures/calm_summary_<metric>.{png,html}`` for the README, with
   plotly.js embedded so the HTML renders through htmlpreview.
 
+Fig. 2 (model-scale square path experiments) is a set of measured tracks over
+aerial imagery, kept as ``docs/figures/experiment_square_<controller>.png``.
+For each, an HTML page with plotly.js embedded is written beside it, so the
+README can link every figure to a zoomable version.
+
 Run from anywhere::
 
     uv run scripts/paper_figures.py
@@ -16,12 +23,15 @@ Run from anywhere::
 
 from __future__ import annotations
 
+import base64
 import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
+
+import plotly.graph_objects as go  # noqa: E402
 
 from asv_rl.evaluation.plotting import grouped_bar_figure, save_figure  # noqa: E402
 
@@ -66,6 +76,20 @@ def paper_panel(values, y_title):
     return fig
 
 
+#: Fig. 2: measured square path tracks of the model-scale experiments.
+EXPERIMENT_IMAGES = ("experiment_square_dqn_3", "experiment_square_dqn_5", "experiment_square_ppo")
+
+
+def image_figure(png: Path) -> go.Figure:
+    """Show a PNG as a zoomable Plotly figure with no axes."""
+    encoded = base64.b64encode(png.read_bytes()).decode("ascii")
+    fig = go.Figure(go.Image(source=f"data:image/png;base64,{encoded}", hoverinfo="skip"))
+    fig.update_xaxes(visible=False)
+    fig.update_yaxes(visible=False)
+    fig.update_layout(margin=dict(l=0, r=0, t=0, b=0))
+    return fig
+
+
 def main() -> int:
     for stem, values, y_title in PANELS:
         save_figure(paper_panel(values, y_title), PAPER_DIR / stem, formats=("pdf",), size=(800, 420))
@@ -74,6 +98,10 @@ def main() -> int:
             DOCS_DIR / stem, formats=("png", "html"), embed_plotlyjs=True,
         )
         print(f"{stem}: {PAPER_DIR / stem}.pdf, {DOCS_DIR / stem}.{{png,html}}")
+    for stem in EXPERIMENT_IMAGES:
+        save_figure(image_figure(DOCS_DIR / f"{stem}.png"), DOCS_DIR / stem, formats=("html",),
+                    embed_plotlyjs=True)
+        print(f"{stem}: {DOCS_DIR / stem}.html")
     return 0
 
 
