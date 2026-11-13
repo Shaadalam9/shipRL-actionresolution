@@ -135,12 +135,20 @@ def base_layout(
     return layout
 
 
-def save_figure(fig: go.Figure, stem: str | Path, formats: Iterable[str] = FIGURE_FORMATS) -> list[Path]:
+def save_figure(
+    fig: go.Figure,
+    stem: str | Path,
+    formats: Iterable[str] = FIGURE_FORMATS,
+    embed_plotlyjs: bool = False,
+    size: tuple[int, int] = (1000, 700),
+) -> list[Path]:
     """Write ``fig`` as ``<stem>.<ext>`` for each requested format.
 
-    HTML references plotly.js from a CDN rather than embedding it, which keeps
-    each file a few tens of kilobytes instead of several megabytes; viewing it
-    needs a network connection the first time.
+    By default HTML references plotly.js from a CDN, which keeps each file a
+    few tens of kilobytes instead of several megabytes. Pass
+    ``embed_plotlyjs=True`` for figures linked from the README: the
+    htmlpreview viewer renders only HTML with plotly.js embedded.
+    ``size`` is the (width, height) in pixels of the PNG and PDF export.
     """
     stem = Path(stem)
     stem.parent.mkdir(parents=True, exist_ok=True)
@@ -151,13 +159,13 @@ def save_figure(fig: go.Figure, stem: str | Path, formats: Iterable[str] = FIGUR
         if fmt == "html":
             fig.write_html(
                 str(target),
-                include_plotlyjs="cdn",
+                include_plotlyjs=True if embed_plotlyjs else "cdn",
                 full_html=True,
                 config={"displaylogo": False, "responsive": True},
             )
         elif fmt in ("png", "pdf"):
             try:
-                fig.write_image(str(target), width=1000, height=700, scale=2 if fmt == "png" else 1)
+                fig.write_image(str(target), width=size[0], height=size[1], scale=2 if fmt == "png" else 1)
             except Exception as exc:  # noqa: BLE001
                 raise RuntimeError(
                     f"Could not write {target}. Static export needs the 'kaleido' package "

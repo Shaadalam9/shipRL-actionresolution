@@ -1,16 +1,22 @@
 # Reinforcement learning for ASV path following
 
-Four reinforcement learning controllers steer the rudder of the KRISO Container
+Reinforcement learning controllers steer the rudder of the KRISO Container
 Ship (KCS) to follow a path, trained and evaluated against one shared 3-DOF
 maneuvering model so that the comparison is between the algorithms rather than
-between four copies of the task.
+between copies of the task.
 
-| Controller | Rudder command | Config | Released policy |
-|---|---|---|---|
-| DQN, 3 actions | −35°, 0°, +35° | [`configs/dqn_3_action.yaml`](configs/dqn_3_action.yaml) | [`models/dqn_3_action/calm_water_v1`](models/dqn_3_action/calm_water_v1) |
-| DQN, 5 actions | −35°, −20°, 0°, +20°, +35° | [`configs/dqn_5_action.yaml`](configs/dqn_5_action.yaml) | [`models/dqn_5_action/calm_water_v1`](models/dqn_5_action/calm_water_v1) |
-| DDPG | continuous, ±35° | [`configs/ddpg.yaml`](configs/ddpg.yaml) | [`models/ddpg/calm_water_v1`](models/ddpg/calm_water_v1) |
-| PPO | continuous, ±35° | [`configs/ppo.yaml`](configs/ppo.yaml) | [`models/ppo/calm_water_v1`](models/ppo/calm_water_v1) |
+This repository accompanies the paper *Influence of Rudder Action Resolution on
+Autonomous Ship Path Following* (Alam and Bazilinskyy). The paper compares three
+controllers that differ in rudder action resolution: DQN with 3 actions, DQN
+with 5 actions, and PPO with a continuous rudder. A DDPG controller is also
+included here but is not part of the paper.
+
+| Controller | Rudder command | In the paper | Config | Released policy |
+|---|---|---|---|---|
+| DQN, 3 actions | −35°, 0°, +35° | yes | [`configs/dqn_3_action.yaml`](configs/dqn_3_action.yaml) | [`models/dqn_3_action/calm_water_v1`](models/dqn_3_action/calm_water_v1) |
+| DQN, 5 actions | −35°, −20°, 0°, +20°, +35° | yes | [`configs/dqn_5_action.yaml`](configs/dqn_5_action.yaml) | [`models/dqn_5_action/calm_water_v1`](models/dqn_5_action/calm_water_v1) |
+| PPO | continuous, ±35° | yes | [`configs/ppo.yaml`](configs/ppo.yaml) | [`models/ppo/calm_water_v1`](models/ppo/calm_water_v1) |
+| DDPG | continuous, ±35° | no | [`configs/ddpg.yaml`](configs/ddpg.yaml) | [`models/ddpg/calm_water_v1`](models/ddpg/calm_water_v1) |
 
 ## Why
 
@@ -68,41 +74,86 @@ needed.
 ## The comparison
 
 `scripts/analyze.py` is the headline experiment: it loads the trained policy of
-every controller listed under `agents` in the [`config`](config) file, runs each
-one over the same reference paths under the same conditions, and writes the
-comparison figures. Edit that list to change which controllers take part —
-`--model NAME=PATH` overrides it for a single run.
+every controller listed under `agents` in the [`config`](config) file (by
+default the paper's three: DQN 3, DQN 5, and PPO), runs each one over the same
+reference paths under the same conditions, and writes the comparison figures.
+Edit that list to change which controllers take part — `--model NAME=PATH`
+overrides it for a single run.
+
+Every controller is evaluated with the same waypoint acceptance radius of
+0.5 ship lengths, as in the paper. The controllers were trained with different
+radii (DQN 5 with 1.5), so evaluating each at its own value would give them
+different tasks. Pass `--arrival-radius trained` to use the trained values
+instead.
 
 ```bash
 uv run scripts/analyze.py                                       # calm water
 uv run scripts/analyze.py --wind-speed 6 --wind-dir 90          # in wind
 uv run scripts/analyze.py --trajectory star --trajectory spiral # chosen paths
+uv run scripts/analyze.py --arrival-radius trained              # trained radii
 ```
 
-Results in calm water, over the five default paths:
+Calm water results of the paper (Table II and Fig. 1) over its nine
+manoeuvres. Every figure below is clickable and opens an interactive version.
 
-![Cross-track error by controller](docs/figures/summary_cross_track_rmse.png)
+[![Cross-track RMSE by controller](docs/figures/calm_summary_rmse.png)](https://htmlpreview.github.io/?https://github.com/Shaadalam9/shipRL-actionresolution/blob/main/docs/figures/calm_summary_rmse.html)
 
-*Cross-track RMSE by controller and reference path, calm water.*
+*Cross-track RMSE (ship lengths) by controller and manoeuvre, calm water.*
 
-![Rudder effort by controller](docs/figures/summary_rudder_effort.png)
+[![Rudder demand by controller](docs/figures/calm_summary_rudder.png)](https://htmlpreview.github.io/?https://github.com/Shaadalam9/shipRL-actionresolution/blob/main/docs/figures/calm_summary_rudder.html)
 
-*Mean absolute rudder angle by controller and reference path, calm water.*
+*Mean absolute realised rudder angle (rad) by controller and manoeuvre, calm water.*
 
-The continuous-rudder controllers track a straight line an order of magnitude
-more tightly than the discrete ones and use far less rudder to do it, while the
-three-action DQN pays for its coarse action set with both the worst tracking
-error and the highest actuator activity. On sharply cornered paths the ordering
-is less clear-cut — the star path defeats all four to different degrees.
+DQN 3 has the lowest mean cross-track RMSE in calm water (1.16 L against 1.25 L
+for both others), while PPO uses the least rudder on every manoeuvre (mean
+0.16 rad against 0.30 and 0.25). Finer rudder resolution helps most where the
+path needs a sustained turn: on the circle, DQN 5 cuts the RMSE of DQN 3 from
+1.08 L to 0.61 L. Under wind and waves PPO has the lowest mean RMSE (0.73 L) and
+again the least rudder in every case.
 
-![Figure-eight tracks](docs/figures/track_figure_eight.png)
+[![Figure-eight tracks](docs/figures/track_figure_eight.png)](https://htmlpreview.github.io/?https://github.com/Shaadalam9/shipRL-actionresolution/blob/main/docs/figures/track_figure_eight.html)
 
-*Paths followed on the figure-of-eight, calm water.*
+*Paths followed on the figure-of-eight, calm water, at the 0.5 L arrival radius.*
 
 Each run writes, per reference path, a track plot, a cross-track error series,
 and a rudder angle series, plus three summary figures and a `results.json`.
 Output goes to `analysis/`, which is not committed — regenerate it with the
-command above.
+command above. Add `--embed-plotlyjs` to make the HTML figures self-contained
+(a few MB each), which the htmlpreview links in this README need.
+
+## Reproducing the paper
+
+The released policies are the evaluated checkpoints of the paper. The default
+`analyze.py` run uses the paper's controllers, its 0.5 L arrival radius, and the
+calm water paths of Table II that this code can build:
+
+```bash
+uv run scripts/analyze.py
+```
+
+The four single-destination rows of Table II (`quadrant_1` to `quadrant_4`)
+are reproduced exactly. The cardioid, astroid, sine, and star rows, the
+tightening spiral, and the wind and wave cases are not yet reproduced by the
+current path definitions, and the circle and the model-scale square path are
+not yet defined here.
+
+The eight wind and wave cases of Table III map to these flags (directions in
+degrees, wind speed relative to ship speed):
+
+| Case | Command |
+|---|---|
+| I | `--trajectory figure_eight --wind-speed 6 --wind-dir 90 --wave-height 3 --wave-period 10 --wave-dir 45` |
+| II | `--trajectory figure_eight --wind-speed 6 --wind-dir -90 --wave-height 3 --wave-period 10 --wave-dir -90` |
+| III | `--trajectory cardioid --wind-speed 3 --wind-dir 0 --wave-height 2 --wave-period 15 --wave-dir 0` |
+| IV | `--trajectory cardioid --wind-speed 5 --wind-dir 45 --wave-height 2 --wave-period 15 --wave-dir 0` |
+| V | `--trajectory sine_wave --wind-speed 6 --wind-dir 180 --wave-height 3 --wave-period 8 --wave-dir 180` |
+| VI | `--trajectory sine_wave --wind-speed 3 --wind-dir 90 --wave-height 3 --wave-period 8 --wave-dir 90` |
+| VII | `--trajectory astroid --wind-speed 4 --wind-dir 135 --wave-height 2 --wave-period 10 --wave-dir 135` |
+| VIII | `--trajectory astroid --wind-speed 4 --wind-dir 45 --wave-height 3 --wave-period 20 --wave-dir -45` |
+
+Fig. 1 of the paper and the two calm water figures above are drawn from the
+values of Table II by `uv run scripts/paper_figures.py`, which writes
+`paper/plots/calm_summary_*.pdf` and `docs/figures/calm_summary_*.{{png,html}}`.
 
 ## Figures
 
@@ -145,6 +196,8 @@ models/<experiment>/<run>/ trained policies, each with its own config
 scripts/train.py           training entry point
 scripts/evaluate.py        evaluate one policy
 scripts/analyze.py         compare the policies listed in `config`
+scripts/paper_figures.py   draw Fig. 1 of the paper and the README summary figures
+docs/figures/              README figures (PNG, with interactive HTML beside each)
 asv_rl/settings.py         project-wide settings read from `config`
 config                     which controllers to compare, figure font, log level
 docker/                    build and run scripts for the training image
@@ -183,7 +236,7 @@ the fallback:
 
 | Key | Effect |
 |---|---|
-| `agents` | Controllers `scripts/analyze.py` compares, in plot order. The default drops `dqn_3_action` and compares `dqn_5_action`, `ddpg`, and `ppo`; add it back for the four-way comparison. |
+| `agents` | Controllers `scripts/analyze.py` compares, in plot order. The default is the paper's three, `dqn_3_action`, `dqn_5_action`, and `ppo`; add `ddpg` for the four-way comparison. |
 | `font_family` | Font of every figure |
 | `font_size` | Base font size of every figure; legends, ticks, and value labels sit two points below it |
 | `plotly_template` | Plotly template underlying every figure |
@@ -234,10 +287,12 @@ way to confirm a sweep is doing what you think.
 
 ## Evaluating one policy
 
-Nine reference paths are available; `uv run scripts/evaluate.py
---list-trajectories` prints them. Each rollout reports cross-track RMSE, mean
-absolute rudder angle (a proxy for actuator wear), and whether the path was
-completed.
+Thirteen reference paths are available; `uv run scripts/evaluate.py
+--list-trajectories` prints them. Without `--trajectory`, the paper's calm water
+paths are run. Each rollout reports cross-track RMSE, mean absolute rudder angle
+(a proxy for actuator wear), and whether the path was completed. As in
+`analyze.py`, the arrival radius is 0.5 L unless `--arrival-radius` says
+otherwise.
 
 Because every controller here was trained in calm water, the interesting
 experiment is evaluating outside those conditions:
@@ -246,8 +301,8 @@ experiment is evaluating outside those conditions:
 uv run scripts/evaluate.py models/ppo/calm_water_v1 \
     --trajectory figure_eight --wind-speed 6 --wind-dir 90
 
-uv run scripts/evaluate.py models/ddpg/calm_water_v1 \
-    --trajectory ellipse --wave-height 3 --wave-period 10 --wave-dir 45
+uv run scripts/evaluate.py models/dqn_5_action/calm_water_v1 \
+    --trajectory cardioid --wave-height 2 --wave-period 15 --wave-dir 0
 ```
 
 ## Adding an algorithm

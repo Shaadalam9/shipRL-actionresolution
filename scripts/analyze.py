@@ -36,9 +36,14 @@ if str(REPO_ROOT) not in sys.path:
 
 from asv_rl import settings  # noqa: E402
 from asv_rl.config import ConfigError  # noqa: E402
+from asv_rl.evaluation.trajectories import (  # noqa: E402
+    EVALUATION_ARRIVAL_RADIUS,
+    PAPER_CALM_PATHS,
+    parse_arrival_radius,
+)
 
 #: Reference paths compared when --trajectory is not given.
-DEFAULT_TRAJECTORIES = ["straight", "ellipse", "cardioid", "figure_eight", "star"]
+DEFAULT_TRAJECTORIES = PAPER_CALM_PATHS
 
 #: Preferred run when an experiment directory holds more than one.
 PREFERRED_RUN = "calm_water_v1"
@@ -127,11 +132,18 @@ def parse_args(argv=None):
         help="Figure format to write. Repeatable. Default: all three.",
     )
     parser.add_argument(
-        "--arrival-radius", type=float,
-        help="Force a common arrival radius on every controller, so the task is "
-             "identical for all. Default: each model's own trained value.",
+        "--arrival-radius", type=parse_arrival_radius, default=EVALUATION_ARRIVAL_RADIUS,
+        metavar="RADIUS",
+        help="Waypoint acceptance radius in ship lengths, applied to every controller so "
+             f"the task is identical for all. Default: {EVALUATION_ARRIVAL_RADIUS}, as in the "
+             "paper. Pass 'trained' to use each model's own trained value instead.",
     )
     parser.add_argument("--max-steps", type=int, default=5000, help="Step budget per rollout")
+    parser.add_argument(
+        "--embed-plotlyjs", action="store_true",
+        help="Embed plotly.js in the HTML figures (a few MB each) so they render through "
+             "htmlpreview, as needed for figures linked from the README.",
+    )
 
     conditions = parser.add_argument_group("environmental conditions (applied to every controller)")
     conditions.add_argument("--wind-speed", type=float, help="Non-dimensional wind speed; enables wind")
@@ -212,6 +224,11 @@ def main(argv=None) -> int:
     )
     from asv_rl.evaluation.rollout import condition_label, run_rollout
 
+    if args.embed_plotlyjs:
+        from functools import partial
+
+        save_figure = partial(save_figure, embed_plotlyjs=True)
+
     formats = tuple(args.formats) if args.formats else FIGURE_FORMATS
 
     # Load each controller's environment, then force the same conditions on all.
@@ -245,7 +262,7 @@ def main(argv=None) -> int:
     if len(set(radii.values())) > 1:
         print(
             f"note        : arrival radius differs between controllers ({radii}). "
-            "Pass --arrival-radius to make the task identical for all.",
+            "Pass a number to --arrival-radius to make the task identical for all.",
         )
     print("-" * 78, flush=True)
 

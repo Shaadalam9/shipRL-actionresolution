@@ -13,6 +13,18 @@ from dataclasses import dataclass
 
 import numpy as np
 
+#: Waypoint acceptance radius (ship lengths) used for every controller in the
+#: paper. The controllers were trained with different radii (DQN 5 used 1.5),
+#: so evaluating each at its own trained value would give them different tasks.
+EVALUATION_ARRIVAL_RADIUS = 0.5
+
+
+def parse_arrival_radius(value: str) -> float | None:
+    """Parse ``--arrival-radius``: a number, or ``trained`` for each model's own value."""
+    if value == "trained":
+        return None
+    return float(value)
+
 
 @dataclass
 class ReferencePath:
@@ -197,7 +209,27 @@ def single_waypoint(quadrant: int = 1, distance: float = 10.0):
     )
 
 
-#: Reference paths selectable by name from ``evaluate.py``.
+def quadrant_1():
+    """Single goal at (10, 10): first quadrant."""
+    return single_waypoint(quadrant=1)
+
+
+def quadrant_2():
+    """Single goal at (-10, 10): second quadrant."""
+    return single_waypoint(quadrant=2)
+
+
+def quadrant_3():
+    """Single goal at (-10, -10): third quadrant."""
+    return single_waypoint(quadrant=3)
+
+
+def quadrant_4():
+    """Single goal at (10, -10): fourth quadrant."""
+    return single_waypoint(quadrant=4)
+
+
+#: Reference paths selectable by name from ``evaluate.py`` and ``analyze.py``.
 TRAJECTORIES = {
     "ellipse": ellipse,
     "cardioid": cardioid,
@@ -208,7 +240,17 @@ TRAJECTORIES = {
     "star": star,
     "figure_eight": figure_eight,
     "single_waypoint": single_waypoint,
+    "quadrant_1": quadrant_1,
+    "quadrant_2": quadrant_2,
+    "quadrant_3": quadrant_3,
+    "quadrant_4": quadrant_4,
 }
+
+#: Calm water paths of the paper (Table II) that this module can build.
+PAPER_CALM_PATHS = [
+    "quadrant_1", "quadrant_2", "quadrant_3", "quadrant_4",
+    "cardioid", "astroid", "sine_wave", "star",
+]
 
 
 def get(name: str, **kwargs) -> ReferencePath:

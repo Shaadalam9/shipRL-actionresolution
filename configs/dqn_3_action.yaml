@@ -1,6 +1,6 @@
 # DQN over three fixed rudder angles (hard-over port, midships, hard-over starboard).
 #
-# No trained checkpoint ships for this variant; see models/dqn_3_action/README.md.
+# These are the settings that produced models/dqn_3_action/calm_water_v1.
 # Train with:  python scripts/train.py configs/dqn_3_action.yaml
 
 algorithm: dqn
@@ -15,7 +15,7 @@ description: >
 environment:
   episode_steps: 160
   integration_dt: 0.3
-  arrival_radius: 0.5 # tighter than the 5-action variant, as originally set
+  arrival_radius: 0.5 # training only; evaluation uses 0.5 for every controller
   terminal_reward: 100.0
   initial_surge: 1.0
   goal_radius_range: [8, 28]

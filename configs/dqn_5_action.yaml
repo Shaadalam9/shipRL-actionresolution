@@ -15,7 +15,7 @@ description: >
 environment:
   episode_steps: 160
   integration_dt: 0.3
-  arrival_radius: 1.5
+  arrival_radius: 1.5 # training only; evaluation uses 0.5 for every controller
   terminal_reward: 100.0
   initial_surge: 1.0
   goal_radius_range: [8, 28]

@@ -2,12 +2,14 @@
 """Evaluate a trained policy on one or more reference paths.
 
 A run directory produced by ``train.py`` carries its own ``config.yaml``, so
-evaluation reuses the exact environment the policy was trained against unless
-you override the conditions on the command line.
+evaluation reuses the environment the policy was trained against, except that
+the waypoint acceptance radius is set to the paper's common 0.5 ship lengths
+(pass ``--arrival-radius trained`` to keep the trained value). Wind and waves
+can be overridden on the command line.
 
 Examples::
 
-    # Every reference path, in calm water
+    # The paper's calm water paths, at the paper's 0.5 L arrival radius
     uv run scripts/evaluate.py models/ddpg/calm_water_v1
 
     # One path, in wind
@@ -16,7 +18,7 @@ Examples::
 
     # In combined wind and waves
     uv run scripts/evaluate.py models/dqn_5_action/calm_water_v1 \
-        --trajectory ellipse --wind-speed 6 --wind-dir 90 \
+        --trajectory figure_eight --wind-speed 6 --wind-dir 90 \
         --wave-height 3 --wave-period 10 --wave-dir 45
 
 Figures are written as PNG, HTML, and PDF. To compare every controller listed
@@ -36,9 +38,14 @@ if str(REPO_ROOT) not in sys.path:
 
 from asv_rl import settings  # noqa: E402
 from asv_rl.config import ConfigError  # noqa: E402
+from asv_rl.evaluation.trajectories import (  # noqa: E402
+    EVALUATION_ARRIVAL_RADIUS,
+    PAPER_CALM_PATHS,
+    parse_arrival_radius,
+)
 
 #: Paths evaluated when --trajectory is not given.
-DEFAULT_TRAJECTORIES = ["straight", "ellipse", "cardioid", "figure_eight", "star"]
+DEFAULT_TRAJECTORIES = PAPER_CALM_PATHS
 
 
 def parse_args(argv=None):
@@ -72,6 +79,12 @@ def parse_args(argv=None):
         help="Figure format to write. Repeatable. Default: all three.",
     )
     parser.add_argument("--verbose", action="store_true", help="Print per-waypoint progress")
+    parser.add_argument(
+        "--arrival-radius", type=parse_arrival_radius, default=EVALUATION_ARRIVAL_RADIUS,
+        metavar="RADIUS",
+        help=f"Waypoint acceptance radius in ship lengths. Default: {EVALUATION_ARRIVAL_RADIUS}, "
+             "as in the paper. Pass 'trained' to use the model's own trained value.",
+    )
 
     conditions = parser.add_argument_group("environmental conditions (override the training config)")
     conditions.add_argument("--wind-speed", type=float, help="Non-dimensional wind speed; enables wind")
@@ -83,7 +96,7 @@ def parse_args(argv=None):
 
 
 def apply_conditions(env_config, args):
-    """Let command-line flags override the wind and wave state of the config."""
+    """Let command-line flags override the wind, wave, and arrival radius of the config."""
     if args.wind_speed is not None:
         env_config.conditions.wind.enabled = True
         env_config.conditions.wind.speed = args.wind_speed
@@ -93,6 +106,8 @@ def apply_conditions(env_config, args):
         env_config.conditions.wave.height = args.wave_height
         env_config.conditions.wave.period = args.wave_period
         env_config.conditions.wave.direction_deg = args.wave_dir
+    if args.arrival_radius is not None:
+        env_config.arrival_radius = args.arrival_radius
     return env_config
 
 
